@@ -104,11 +104,6 @@ def create_model(num_classes, pretrained=True):
     """
     Create and initialize the model
     """
-    # Load a pretrained YOLO model
-    model = YOLO('yolov8n.pt')
-    
-    # Modify the model for our number of classes
-    model.model.nc = num_classes
-    
-    # Train the model
+    # Create our custom model with pattern attention
+    model = CrochetStitchDetector(num_classes=num_classes, pretrained=pretrained)
     return model 

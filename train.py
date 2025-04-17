@@ -1,14 +1,28 @@
 import os
 import argparse
+import torch
+from torch.optim import Adam
 from model import create_model
+from ultralytics import YOLO
+from torch.utils.data import DataLoader
 
 def main(args):
-    # Create model
-    model = create_model(num_classes=args.num_classes)
+    # Set device
+    device = torch.device(args.device if args.device else ('cuda' if torch.cuda.is_available() else 'cpu'))
     
-    # Train the model using YOLOv8's native training method
-    model.train(
-        data=os.path.join(args.data_dir, 'data.yaml'),  # Path to data.yaml file
+    # Create our custom model with attention
+    model = create_model(num_classes=args.num_classes)
+    model = model.to(device)
+    
+    # Create optimizer
+    optimizer = Adam(model.parameters(), lr=0.001)
+    
+    # Create a base YOLO model for data loading and utilities
+    base_model = YOLO('yolov8n.pt')
+    
+    # Train the model
+    base_model.train(
+        data=os.path.join(args.data_dir, 'data.yaml'),
         epochs=args.epochs,
         imgsz=640,
         batch=args.batch_size,
@@ -16,7 +30,8 @@ def main(args):
         workers=args.num_workers,
         project=args.checkpoint_dir,
         name='train',
-        exist_ok=True
+        exist_ok=True,
+        model=model  # Use our custom model
     )
 
 if __name__ == '__main__':
