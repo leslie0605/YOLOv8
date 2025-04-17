@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 4
+names: ['ch', 'dc', 'hdc', 'sc']
+
+roboflow:
+  workspace: akinorewek
+  project: crochet-stitch-detect
+  version: 15
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/akinorewek/crochet-stitch-detect/dataset/15
