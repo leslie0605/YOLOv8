@@ -205,79 +205,78 @@ def compute_ap(recalls, precisions):
 def evaluate(model, data_loader, device, iou_threshold=0.5):
     model.eval()
     
-    # Initialize containers for predictions and ground truth
-    all_predictions = []
-    all_targets = []
-    
-    # Collect all predictions and targets
-    with torch.no_grad():
-        for images, targets in data_loader:
-            images = [image.to(device) for image in images]
-            
-            # Get predictions
-            predictions = model(images)
-            
-            # Move predictions to CPU
-            predictions = [{k: v.cpu() for k, v in pred.items()} for pred in predictions]
-            
-            all_predictions.extend(predictions)
-            all_targets.extend(targets)
-    
     # Initialize metrics
     metrics_per_class = defaultdict(lambda: {'tp': [], 'fp': [], 'scores': [], 'num_gt': 0})
     
-    # Process each image
-    for pred, target in zip(all_predictions, all_targets):
-        pred_boxes = pred['boxes']
-        pred_scores = pred['scores']
-        pred_labels = pred['labels']
-        
-        gt_boxes = target['boxes']
-        gt_labels = target['labels']
-        
-        # Update ground truth counts
-        for label in gt_labels:
-            metrics_per_class[label.item()]['num_gt'] += 1
-        
-        if len(pred_boxes) == 0 or len(gt_boxes) == 0:
-            continue
-        
-        # Compute IoU between predictions and ground truth
-        iou_matrix = box_iou(pred_boxes, gt_boxes)
-        
-        # Process each prediction
-        gt_matched = set()
-        for pred_idx in range(len(pred_boxes)):
-            pred_label = pred_labels[pred_idx].item()
-            pred_score = pred_scores[pred_idx].item()
+    # Collect all predictions and targets
+    with torch.no_grad():
+        for images, targets in tqdm(data_loader, desc='Evaluating'):
+            # Stack images into a batch tensor
+            images = torch.stack(images).to(device)
             
-            # Find best matching ground truth box
-            best_iou = 0
-            best_gt_idx = -1
+            # Get predictions
+            outputs = model(images)  # Shape: (batch_size, num_anchors, 5 + num_classes)
             
-            for gt_idx in range(len(gt_boxes)):
-                if gt_idx in gt_matched:
+            # Process each image in the batch
+            for idx, (output, target) in enumerate(zip(outputs, targets)):
+                # Get ground truth boxes and labels
+                gt_boxes = target['boxes'].to(device)
+                gt_labels = target['labels'].to(device)
+                
+                # Update ground truth counts
+                for label in gt_labels:
+                    metrics_per_class[label.item()]['num_gt'] += 1
+                
+                # Get predictions for this image
+                # Each row in output is: [x1, y1, x2, y2, obj_conf, class_scores...]
+                pred_boxes = output[:, :4]  # Get boxes in x1,y1,x2,y2 format
+                obj_conf = output[:, 4]  # Object confidence
+                class_scores = output[:, 5:]  # Class scores
+                
+                # Get class predictions and scores
+                class_conf, class_pred = class_scores.max(1)  # Get max confidence and corresponding class
+                pred_scores = obj_conf * class_conf  # Combine object and class confidence
+                pred_labels = class_pred
+                
+                if len(pred_boxes) == 0 or len(gt_boxes) == 0:
                     continue
+                
+                # Compute IoU between predictions and ground truth
+                iou_matrix = box_iou(pred_boxes, gt_boxes)
+                
+                # Process each prediction
+                gt_matched = set()
+                for pred_idx in range(len(pred_boxes)):
+                    pred_label = pred_labels[pred_idx].item()
+                    pred_score = pred_scores[pred_idx].item()
                     
-                if gt_labels[gt_idx].item() != pred_label:
-                    continue
+                    # Find best matching ground truth box
+                    best_iou = 0
+                    best_gt_idx = -1
                     
-                iou = iou_matrix[pred_idx, gt_idx]
-                if iou > best_iou:
-                    best_iou = iou
-                    best_gt_idx = gt_idx
-            
-            # Store prediction result
-            metrics = metrics_per_class[pred_label]
-            metrics['scores'].append(pred_score)
-            
-            if best_iou >= iou_threshold and best_gt_idx not in gt_matched:
-                metrics['tp'].append(1)
-                metrics['fp'].append(0)
-                gt_matched.add(best_gt_idx)
-            else:
-                metrics['tp'].append(0)
-                metrics['fp'].append(1)
+                    for gt_idx in range(len(gt_boxes)):
+                        if gt_idx in gt_matched:
+                            continue
+                            
+                        if gt_labels[gt_idx].item() != pred_label:
+                            continue
+                            
+                        iou = iou_matrix[pred_idx, gt_idx]
+                        if iou > best_iou:
+                            best_iou = iou
+                            best_gt_idx = gt_idx
+                    
+                    # Store prediction result
+                    metrics = metrics_per_class[pred_label]
+                    metrics['scores'].append(pred_score)
+                    
+                    if best_iou >= iou_threshold and best_gt_idx not in gt_matched:
+                        metrics['tp'].append(1)
+                        metrics['fp'].append(0)
+                        gt_matched.add(best_gt_idx)
+                    else:
+                        metrics['tp'].append(0)
+                        metrics['fp'].append(1)
     
     # Compute AP for each class
     ap_per_class = {}
@@ -330,7 +329,7 @@ def main(args):
     
     # Create data loader (we only need validation)
     _, val_loader = create_data_loaders(
-        data_dir=args.data_dir,
+        base_dir=args.data_dir,
         batch_size=args.batch_size,
         num_workers=args.num_workers
     )

@@ -1,9 +1,10 @@
-train: ../train/images
-val: ../valid/images
-test: ../test/images
+path: /Users/zhaoyufan/Desktop/NUS/Sem4/CS5242/project/yolov8/data # dataset root dir
+train: train/images # train images (relative to 'path')
+val: valid/images # val images (relative to 'path')
+test: test/images # test images (relative to 'path')
 
-nc: 4
-names: ['ch', 'dc', 'hdc', 'sc']
+nc: 4 # number of classes
+names: ["ch", "dc", "hdc", "sc"] # class names
 
 roboflow:
   workspace: akinorewek

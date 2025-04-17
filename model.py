@@ -30,14 +30,41 @@ class PatternAttentionModule(nn.Module):
         # Residual connection
         return self.gamma * out + x
 
+class YOLOLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.bce = nn.BCEWithLogitsLoss()
+        self.mse = nn.MSELoss()
+        
+    def forward(self, predictions, targets):
+        # Unpack predictions
+        pred_boxes = predictions[..., :4]  # [batch, anchors, 4]
+        pred_obj = predictions[..., 4:5]   # [batch, anchors, 1]
+        pred_cls = predictions[..., 5:]    # [batch, anchors, num_classes]
+        
+        # Calculate losses
+        box_loss = self.mse(pred_boxes, targets['boxes'])
+        obj_loss = self.bce(pred_obj, targets['obj'])
+        cls_loss = self.bce(pred_cls, targets['cls'])
+        
+        # Combine losses
+        total_loss = box_loss + obj_loss + cls_loss
+        
+        return {
+            'box_loss': box_loss,
+            'obj_loss': obj_loss,
+            'cls_loss': cls_loss,
+            'total_loss': total_loss
+        }
+
 class CrochetStitchDetector(nn.Module):
     def __init__(self, num_classes, pretrained=True):
         super().__init__()
         # Load pretrained YOLOv8 model
-        self.yolo = YOLO('yolov8n.pt')
+        self.yolo = YOLO('yolov8n.pt').model
         
         # Freeze backbone
-        for param in self.yolo.model.model[:10].parameters():
+        for param in self.yolo.model[:10].parameters():
             param.requires_grad = False
             
         # Add pattern attention modules after specific YOLO layers
@@ -46,12 +73,15 @@ class CrochetStitchDetector(nn.Module):
         self.pattern_attention3 = PatternAttentionModule(1024) # After layer 9
         
         # Modify the detection head for our number of classes
-        self.yolo.model.model[-1].nc = num_classes
+        self.yolo.model[-1].nc = num_classes
         
-    def forward(self, x):
+        # Add loss function
+        self.loss_fn = YOLOLoss()
+        
+    def forward(self, x, targets=None):
         # Get intermediate features from YOLO
         features = []
-        for i, module in enumerate(self.yolo.model.model):
+        for i, module in enumerate(self.yolo.model):
             x = module(x)
             if i in [4, 6, 9]:
                 features.append(x)
@@ -61,12 +91,24 @@ class CrochetStitchDetector(nn.Module):
         features[1] = self.pattern_attention2(features[1])
         features[2] = self.pattern_attention3(features[2])
         
-        # Continue with YOLO detection head
-        return self.yolo.model.model[-1](features[-1])
+        # Get predictions from YOLO head
+        predictions = self.yolo.model[-1](features[-1])
+        
+        # If in training mode, calculate and return loss
+        if self.training and targets is not None:
+            return self.loss_fn(predictions, targets)
+            
+        return predictions
 
 def create_model(num_classes, pretrained=True):
     """
     Create and initialize the model
     """
-    model = CrochetStitchDetector(num_classes=num_classes, pretrained=pretrained)
+    # Load a pretrained YOLO model
+    model = YOLO('yolov8n.pt')
+    
+    # Modify the model for our number of classes
+    model.model.nc = num_classes
+    
+    # Train the model
     return model 

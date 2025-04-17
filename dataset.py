@@ -105,18 +105,14 @@ def get_transform(train=True):
     
     return transform
 
-def create_data_loaders(img_dir, label_dir, batch_size=16, num_workers=4):
+def create_data_loaders(base_dir, batch_size=16, num_workers=4):
     """
     Create training and validation data loaders
     Args:
-        img_dir (str): Directory containing the images
-        label_dir (str): Directory containing the labels
+        base_dir (str): Base directory containing the data
         batch_size (int): Batch size for training
         num_workers (int): Number of workers for data loading
     """
-    # Get base directory from img_dir
-    base_dir = os.path.dirname(os.path.dirname(img_dir))
-    
     # Create datasets
     train_dataset = CrochetStitchDataset(
         data_dir=base_dir,
