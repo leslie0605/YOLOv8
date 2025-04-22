@@ -63,16 +63,34 @@ pip install ultralytics
 
 ### Training
 
-#### Train from scratch with attention (no pretrained weights)
+#### Train YOLOv8 with Attention
+
+##### Train from scratch with attention (no pretrained weights)
 
 ```bash
 python train.py --epochs 100 --batch 16
 ```
 
-#### Train with pretrained YOLOv8 weights and attention
+##### Train with pretrained YOLOv8 weights and attention
 
 ```bash
 python train.py --epochs 100 --batch 16 --pretrained
+```
+
+#### Train Original YOLOv8 (without Attention)
+
+If you want to compare with the original YOLOv8 model without attention mechanisms, you can use the following commands:
+
+##### Train YOLOv8 from scratch (no attention)
+
+```bash
+yolo train model=yolov8n.yaml data=data/data.yaml epochs=100 batch=16 name=yolo_scratch
+```
+
+##### Train YOLOv8 with pretrained weights (no attention)
+
+```bash
+yolo train model=yolov8n.pt data=data/data.yaml epochs=100 batch=16 name=yolo_pretrained
 ```
 
 #### Additional training options
@@ -92,14 +110,24 @@ Parameters:
 
 ### Evaluation
 
-#### Evaluate the model
+#### Evaluate the models with attention
 
 ```bash
-# For models trained from scratch
+# For models trained from scratch with attention
 yolo val model=runs/cbam_scratch/weights/best.pt data=data/data.yaml task=detect
 
-# For models trained with pretrained weights
+# For models trained with pretrained weights and attention
 yolo val model=runs/cbam_pretrained/weights/best.pt data=data/data.yaml task=detect
+```
+
+#### Evaluate the original YOLOv8 models (without attention)
+
+```bash
+# For original YOLOv8 trained from scratch
+yolo val model=runs/yolo_scratch/weights/best.pt data=data/data.yaml task=detect
+
+# For original YOLOv8 with pretrained weights
+yolo val model=runs/yolo_pretrained/weights/best.pt data=data/data.yaml task=detect
 ```
 
 ## Understanding the Results
