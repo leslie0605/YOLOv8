@@ -63,13 +63,13 @@ pip install ultralytics
 
 ### Training
 
-#### Train from scratch (no pretrained weights)
+#### Train from scratch with attention (no pretrained weights)
 
 ```bash
 python train.py --epochs 100 --batch 16
 ```
 
-#### Train with pretrained YOLOv8 weights
+#### Train with pretrained YOLOv8 weights and attention
 
 ```bash
 python train.py --epochs 100 --batch 16 --pretrained
