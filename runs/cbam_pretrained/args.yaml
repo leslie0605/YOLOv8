@@ -1,6 +1,6 @@
 task: detect
 mode: train
-model: models/attention.yaml
+model: models/yolov8n_cbam.yaml
 data: data/data.yaml
 epochs: 100
 time: null
@@ -13,7 +13,7 @@ cache: false
 device: null
 workers: 4
 project: runs
-name: train
+name: cbam_pretrained
 exist_ok: true
 pretrained: false
 optimizer: auto
@@ -101,4 +101,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: runs/train
+save_dir: runs/cbam_pretrained
