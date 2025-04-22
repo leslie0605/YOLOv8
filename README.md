@@ -65,13 +65,13 @@ pip install ultralytics
 
 #### Train YOLOv8 with Attention
 
-##### Train from scratch with attention (no pretrained weights)
+##### 1. Train from scratch with attention (no pretrained weights)
 
 ```bash
 python train.py --epochs 100 --batch 16
 ```
 
-##### Train with pretrained YOLOv8 weights and attention
+##### 2. Train with pretrained YOLOv8 weights and attention
 
 ```bash
 python train.py --epochs 100 --batch 16 --pretrained
@@ -81,13 +81,13 @@ python train.py --epochs 100 --batch 16 --pretrained
 
 If you want to compare with the original YOLOv8 model without attention mechanisms, you can use the following commands:
 
-##### Train YOLOv8 from scratch (no attention)
+##### 3. Train YOLOv8 from scratch (no attention)
 
 ```bash
 yolo train model=yolov8n.yaml data=data/data.yaml epochs=100 batch=16 name=yolo_scratch
 ```
 
-##### Train YOLOv8 with pretrained weights (no attention)
+##### 4. Train YOLOv8 with pretrained weights (no attention)
 
 ```bash
 yolo train model=yolov8n.pt data=data/data.yaml epochs=100 batch=16 name=yolo_pretrained
