@@ -1,156 +1,173 @@
-# YOLOv8 with Attention for Crochet Stitch Detection
+# YOLOv8 with CBAM Attention
 
-This project implements an enhanced version of YOLOv8 with attention mechanisms for detecting crochet stitches. The attention modules help the model focus on important patterns in crochet work, improving detection accuracy.
+This project implements and compares YOLOv8 object detection models with and without CBAM (Convolutional Block Attention Module) attention mechanism. The implementation supports both training from scratch and using pretrained weights.
 
-## Project Overview
+## Models
 
-Crochet stitch detection is challenging because of the repetitive patterns and similar appearances of different stitch types. This project addresses these challenges by:
+1. **Standard YOLOv8 (pretrained)** - YOLOv8 nano with pretrained weights
+2. **Standard YOLOv8 (from scratch)** - YOLOv8 nano trained from scratch
+3. **YOLOv8 with CBAM (pretrained)** - YOLOv8 nano with CBAM attention, using pretrained weights
+4. **YOLOv8 with CBAM (from scratch)** - YOLOv8 nano with CBAM attention, trained from scratch
 
-1. Using YOLOv8 as the base object detection framework
-2. Adding CBAM (Convolutional Block Attention Module) at strategic layers
-3. Supporting both training from scratch and using pretrained weights
-
-The attention mechanisms help the model focus on subtle differences between stitch types by enhancing important features in both channel and spatial dimensions.
-
-## Project Structure
-
-```
-project/
-├── data/                       # Dataset directory
-│   ├── train/                  # Training images and labels
-│   ├── valid/                  # Validation images and labels
-│   ├── test/                   # Test images and labels
-│   └── data.yaml               # Dataset configuration
-├── models/
-│   ├── attention.py            # CBAM attention module implementation
-│   └── yolov8n_cbam.yaml       # Model architecture with attention
-└── train.py                    # Training script
-```
-
-## Model Architecture
-
-The model is based on YOLOv8-nano with CBAM attention modules inserted at three strategic locations:
-
-1. After the initial feature extraction (64 channels)
-2. After the middle layers (128 channels)
-3. After deeper feature layers (256 channels)
-
-Each CBAM module consists of:
-
-- Channel attention that focuses on "which features are important"
-- Spatial attention that focuses on "where the important features are located"
-
-This dual attention approach is particularly effective for crochet stitch detection, where both the type of features and their spatial arrangement are important.
-
-## Dataset
-
-The dataset contains four types of crochet stitches:
-
-- ch: Chain stitch
-- dc: Double crochet
-- hdc: Half double crochet
-- sc: Single crochet
-
-Images are annotated in YOLO format with bounding boxes around each stitch.
-
-## Usage
+## Getting Started
 
 ### Prerequisites
 
+- Python 3.8+
+- PyTorch 1.8+
+- Ultralytics YOLO package
+
+Install the required packages:
+
 ```bash
 pip install ultralytics
+pip install matplotlib seaborn scikit-learn
 ```
 
-### Training
+### Directory Structure
 
-#### Train YOLOv8 with Attention
+```
+.
+├── data/
+│   ├── train/
+│   │   ├── images/
+│   │   └── labels/
+│   ├── valid/
+│   │   ├── images/
+│   │   └── labels/
+│   ├── test/
+│   │   ├── images/
+│   │   └── labels/
+│   └── data.yaml
+├── models/
+│   ├── attention.py
+│   └── yolov8n_cbam.yaml
+├── outputs/                  # All output files are stored here
+│   └── experiments/          # Experiment results
+│       └── <experiment_name>/
+│           ├── yolo_pretrained/
+│           ├── yolo_scratch/
+│           ├── yolo_cbam_pretrained/
+│           ├── yolo_cbam_scratch/
+│           └── summary_report.md
+├── train.py
+├── evaluate.py
+├── visualize.py
+├── run_experiments.py
+└── README.md
+```
 
-##### 1. Train from scratch with attention (no pretrained weights)
+## Step-by-Step Training and Evaluation
+
+### Method 1: Automated Experiments with All Models
+
+To train, evaluate, and visualize all model variants in one go:
+
+Change the 'path' in data.yaml to the absolute path of your local machine's data folder.
 
 ```bash
-python train.py --epochs 100 --batch 16
+python run_experiments.py --experiment-name my_experiment --epochs 50 --batch 16
 ```
 
-##### 2. Train with pretrained YOLOv8 weights and attention
+This will:
+
+1. Create an experiment directory structure in `outputs/experiments/my_experiment/`
+2. Train all four model configurations
+3. Evaluate each model on the test set
+4. Generate visualizations
+5. Create a summary report comparing performance metrics
+
+Options:
+
+- `--experiment-name`: Name for this experiment (default: timestamp-based name)
+- `--epochs`: Number of training epochs (default: 50)
+- `--batch`: Batch size for training and evaluation (default: 16)
+- `--device`: Device to use (default: '0' for GPU, use 'cpu' for CPU training)
+
+To run only specific model configurations, use these flags:
+
+- `--yolo-pretrained`: Run standard YOLOv8 with pretrained weights
+- `--yolo-scratch`: Run standard YOLOv8 from scratch
+- `--yolo-cbam-pretrained`: Run YOLOv8 with CBAM attention using pretrained weights
+- `--yolo-cbam-scratch`: Run YOLOv8 with CBAM attention from scratch
+
+### Method 2: Step-by-Step Manual Process
+
+If you want more control, you can run each step manually.
+
+#### 1. Training
+
+**Standard YOLOv8 with Pretrained Weights**:
 
 ```bash
-python train.py --epochs 100 --batch 16 --pretrained
+yolo train task=detect model=yolov8n.pt data=data/data.yaml epochs=50 batch=16 project=outputs/manual name=yolo_pretrained
 ```
 
-#### Train Original YOLOv8 (without Attention)
-
-If you want to compare with the original YOLOv8 model without attention mechanisms, you can use the following commands:
-
-##### 3. Train YOLOv8 from scratch (no attention)
+**Standard YOLOv8 from Scratch**:
 
 ```bash
-yolo train model=yolov8n.yaml data=data/data.yaml epochs=100 batch=16 name=yolo_scratch
+yolo train task=detect model=yolov8n.yaml data=data/data.yaml epochs=50 batch=16 project=outputs/manual name=yolo_scratch
 ```
 
-##### 4. Train YOLOv8 with pretrained weights (no attention)
+**YOLOv8 with CBAM Attention using Pretrained Weights**:
 
 ```bash
-yolo train model=yolov8n.pt data=data/data.yaml epochs=100 batch=16 name=yolo_pretrained
+python train.py --epochs=50 --batch=16 --device=0 --pretrained --project=outputs/manual --name=yolo_cbam_pretrained
 ```
 
-#### Additional training options
+**YOLOv8 with CBAM Attention from Scratch**:
 
 ```bash
-python train.py --epochs 100 --batch 16 --pretrained --device 0 --workers 4 --verbose
+python train.py --epochs=50 --batch=16 --device=0 --project=outputs/manual --name=yolo_cbam_scratch
 ```
 
-Parameters:
+#### 2. Evaluation
 
-- `--epochs`: Number of training epochs
-- `--batch`: Batch size
-- `--pretrained`: Use pretrained YOLOv8 weights
-- `--device`: Device to train on (e.g., "0" for first GPU, empty for CPU)
-- `--workers`: Number of data loading workers
-- `--verbose`: Show detailed model information
-
-### Evaluation
-
-#### Evaluate the models with attention
+**Standard YOLOv8 Models**:
 
 ```bash
-# For models trained from scratch with attention
-yolo val model=runs/cbam_scratch/weights/best.pt data=data/data.yaml task=detect
-
-# For models trained with pretrained weights and attention
-yolo val model=runs/cbam_pretrained/weights/best.pt data=data/data.yaml task=detect
+yolo val task=detect model=outputs/manual/yolo_pretrained/weights/best.pt data=data/data.yaml split=test batch=16 save_json=True save_conf=True save=True project=outputs/manual name=yolo_pretrained_eval
 ```
 
-#### Evaluate the original YOLOv8 models (without attention)
+**YOLOv8 with CBAM Attention**:
 
 ```bash
-# For original YOLOv8 trained from scratch
-yolo val model=runs/yolo_scratch/weights/best.pt data=data/data.yaml task=detect
-
-# For original YOLOv8 with pretrained weights
-yolo val model=runs/yolo_pretrained/weights/best.pt data=data/data.yaml task=detect
+python evaluate.py --weights=outputs/manual/yolo_cbam_pretrained/weights/best.pt --batch=16 --device=0 --visualize=20 --plot-per-class --project=outputs/manual --name=yolo_cbam_pretrained_eval
 ```
 
-## Understanding the Results
+#### 3. Visualization
 
-The model performance is measured using standard object detection metrics:
+For any model, run the visualization script on the evaluation results directory:
 
-- **Precision (P)**: Accuracy of positive predictions
-- **Recall (R)**: Percentage of actual objects detected
-- **mAP50**: Mean Average Precision at IoU=0.50
-- **mAP50-95**: Mean Average Precision averaged over IoU thresholds from 0.50 to 0.95
+```bash
+python visualize.py --results-dir=outputs/manual/yolo_pretrained_eval --output-dir=outputs/manual/yolo_pretrained_viz
+```
 
-These metrics are reported for each stitch type and for the overall model.
+## Advanced Analysis
+
+For comparing multiple models side by side, you can use the automated experiment script with specific model flags. For example, to compare only the pretrained models:
+
+```bash
+python run_experiments.py --yolo-pretrained --yolo-cbam-pretrained --epochs 50
+```
+
+## Results
+
+After running the experiments, you'll find:
+
+1. A summary report in Markdown format comparing model performance (`outputs/experiments/<experiment_name>/summary_report.md`)
+2. Detailed metrics and visualizations for each model, including:
+   - Precision-Recall curves
+   - Confusion matrices
+   - Detection examples
+   - Per-class performance charts
+
+All results are organized in a consistent directory structure within the `outputs` folder.
 
 ## Implementation Details
 
-The CBAM attention module dynamically adapts to the channel dimensions of the layers it's attached to, making it compatible with different scales of the YOLOv8 model. The attention mechanism is implemented with:
-
-1. Channel attention using global average pooling, followed by a bottleneck structure
-2. Spatial attention using both average and max pooling operations
-3. Residual connections to maintain gradient flow
-
-When using pretrained weights, only the compatible layers are transferred, while the attention modules are initialized from scratch. This approach combines the feature extraction power of pretrained YOLOv8 with the enhanced focus provided by attention mechanisms.
-
-## Acknowledgments
-
-This project builds upon the [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) implementation and incorporates the CBAM attention mechanism introduced in the paper "CBAM: Convolutional Block Attention Module" by Woo et al.
+- The CBAM attention module is implemented in `models/attention.py`
+- The YOLOv8 model architecture with CBAM is defined in `models/yolov8n_cbam.yaml`
+- The training process with weight transfer is handled in `train.py`
+- The project uses a unified directory structure for all outputs in the `outputs` folder
+- Data paths are relative, allowing the project to be used on different systems without modification
