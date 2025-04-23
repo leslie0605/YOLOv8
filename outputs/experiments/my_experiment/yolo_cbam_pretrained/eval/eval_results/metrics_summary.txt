@@ -1,0 +1,7 @@
+Model: outputs\experiments\my_experiment\yolo_cbam_pretrained\train\weights\best.pt
+Data configuration: data\data.yaml
+mAP@0.5:0.95: 0.1600
+mAP@0.5: 0.3615
+mAP@0.75: 0.1193
+Precision: 0.7233
+Recall: 0.3367
