@@ -35,7 +35,7 @@ def setup_experiment_folders(experiment_name):
     base_dir.mkdir(parents=True, exist_ok=True)
     
     # Create folders for each model type
-    for model_type in ["yolo_pretrained", "yolo_scratch", "yolo_cbam_pretrained", "yolo_cbam_scratch"]:
+    for model_type in ["yolo_pretrained", "yolo_scratch", "yolo_cbam_scratch"]:
         model_dir = base_dir / model_type
         model_dir.mkdir(exist_ok=True)
     
@@ -81,20 +81,6 @@ def train_model(model_type, epochs, batch_size, device, exp_dir):
              "name=train",
              "exist_ok=True"],
             f"Training standard YOLOv8 from scratch"
-        )
-    
-    elif model_type == "yolo_cbam_pretrained":
-        # YOLOv8 with CBAM attention, pretrained
-        result = run_command(
-            ["python", "train.py", 
-             f"--epochs={epochs}", 
-             f"--batch={batch_size}",
-             f"--device={device}",
-             "--pretrained",
-             "--verbose",
-             f"--project={model_dir}",
-             "--name=train"],
-            f"Training YOLOv8 with CBAM attention using pretrained weights"
         )
     
     elif model_type == "yolo_cbam_scratch":
@@ -179,38 +165,6 @@ def visualize_results(model_type, eval_dir, exp_dir):
     return result == 0  # Return True if command succeeded
 
 
-def create_summary_report(exp_dir, model_results):
-    """Create a summary report of all model performances"""
-    report_path = exp_dir / "summary_report.md"
-    
-    with open(report_path, 'w') as f:
-        f.write(f"# Experiment Results: {exp_dir.name}\n\n")
-        f.write("## Model Performance Comparison\n\n")
-        
-        # Create table header
-        f.write("| Model | mAP@0.5:0.95 | mAP@0.5 | mAP@0.75 | Precision | Recall |\n")
-        f.write("|-------|-------------|---------|----------|-----------|--------|\n")
-        
-        # Add each model's results
-        for model_type, metrics in model_results.items():
-            if metrics:
-                f.write(f"| {model_type} | {metrics.get('map', 'N/A'):.4f} | {metrics.get('map50', 'N/A'):.4f} | ")
-                f.write(f"{metrics.get('map75', 'N/A'):.4f} | {metrics.get('precision', 'N/A'):.4f} | {metrics.get('recall', 'N/A'):.4f} |\n")
-            else:
-                f.write(f"| {model_type} | N/A | N/A | N/A | N/A | N/A |\n")
-        
-        # Add paths to detailed results
-        f.write("\n## Detailed Results\n\n")
-        for model_type in model_results.keys():
-            f.write(f"### {model_type}\n\n")
-            f.write(f"- Training logs: `experiments/{exp_dir.name}/{model_type}/train/`\n")
-            f.write(f"- Evaluation results: `experiments/{exp_dir.name}/{model_type}/eval/`\n")
-            f.write(f"- Visualizations: `experiments/{exp_dir.name}/{model_type}/viz/`\n\n")
-    
-    print(f"Summary report created at {report_path}")
-    return report_path
-
-
 def extract_metrics(eval_dir, model_type):
     """Extract metrics from evaluation results"""
     # Try to find JSON results
@@ -268,14 +222,6 @@ def main(opt):
     exp_dir = setup_experiment_folders(opt.experiment_name)
     print(f"Experiment results will be saved to: {exp_dir}")
     
-    # Dictionary to store results
-    model_results = {
-        "yolo_pretrained": None,
-        "yolo_scratch": None,
-        "yolo_cbam_pretrained": None,
-        "yolo_cbam_scratch": None
-    }
-    
     # Process each model if selected
     if opt.all or opt.yolo_pretrained:
         if train_model("yolo_pretrained", opt.epochs, opt.batch, opt.device, exp_dir):
@@ -300,7 +246,6 @@ def main(opt):
             
             if evaluate_model("yolo_pretrained", weights_path, opt.batch, opt.device, exp_dir):
                 visualize_results("yolo_pretrained", eval_dir, exp_dir)
-                model_results["yolo_pretrained"] = extract_metrics(f"{eval_dir}/eval_results", "yolo_pretrained")
     
     if opt.all or opt.yolo_scratch:
         if train_model("yolo_scratch", opt.epochs, opt.batch, opt.device, exp_dir):
@@ -325,31 +270,6 @@ def main(opt):
             
             if evaluate_model("yolo_scratch", weights_path, opt.batch, opt.device, exp_dir):
                 visualize_results("yolo_scratch", eval_dir, exp_dir)
-                model_results["yolo_scratch"] = extract_metrics(f"{eval_dir}/eval_results", "yolo_scratch")
-    
-    if opt.all or opt.yolo_cbam_pretrained:
-        if train_model("yolo_cbam_pretrained", opt.epochs, opt.batch, opt.device, exp_dir):
-            weights_path = str(Path(exp_dir / "yolo_cbam_pretrained/train/weights/best.pt"))
-            eval_dir = str(Path(exp_dir / "yolo_cbam_pretrained/eval"))
-            
-            # Ensure the weights path exists
-            weights_file = Path(weights_path)
-            if not weights_file.exists():
-                print(f"Warning: Weights file not found at {weights_path}")
-                # Try to find it in alternative locations
-                alt_paths = [
-                    Path(exp_dir / "yolo_cbam_pretrained/train/train/weights/best.pt")
-                ]
-                
-                for alt_path in alt_paths:
-                    if alt_path.exists():
-                        weights_path = str(alt_path)
-                        print(f"Using alternative weights file: {weights_path}")
-                        break
-            
-            if evaluate_model("yolo_cbam_pretrained", weights_path, opt.batch, opt.device, exp_dir):
-                visualize_results("yolo_cbam_pretrained", eval_dir, exp_dir)
-                model_results["yolo_cbam_pretrained"] = extract_metrics(f"{eval_dir}/eval_results", "yolo_cbam_pretrained")
     
     if opt.all or opt.yolo_cbam_scratch:
         if train_model("yolo_cbam_scratch", opt.epochs, opt.batch, opt.device, exp_dir):
@@ -373,10 +293,6 @@ def main(opt):
             
             if evaluate_model("yolo_cbam_scratch", weights_path, opt.batch, opt.device, exp_dir):
                 visualize_results("yolo_cbam_scratch", eval_dir, exp_dir)
-                model_results["yolo_cbam_scratch"] = extract_metrics(f"{eval_dir}/eval_results", "yolo_cbam_scratch")
-    
-    # Create summary report
-    report_path = create_summary_report(exp_dir, model_results)
     
     # Print total execution time
     end_time = time.time()
@@ -386,7 +302,6 @@ def main(opt):
     
     print(f"\n\nExperiment completed in {int(hours)}h {int(minutes)}m {int(seconds)}s")
     print(f"Results saved to {exp_dir}")
-    print(f"Summary report: {report_path}")
 
 
 if __name__ == "__main__":
@@ -408,16 +323,13 @@ if __name__ == "__main__":
                         help="Run standard YOLOv8 with pretrained weights")
     parser.add_argument("--yolo-scratch", action="store_true", 
                         help="Run standard YOLOv8 from scratch")
-    parser.add_argument("--yolo-cbam-pretrained", action="store_true", 
-                        help="Run YOLOv8 with CBAM attention using pretrained weights")
     parser.add_argument("--yolo-cbam-scratch", action="store_true", 
                         help="Run YOLOv8 with CBAM attention from scratch")
     
     opt = parser.parse_args()
     
     # If no specific models selected, run all
-    if not (opt.all or opt.yolo_pretrained or opt.yolo_scratch or 
-            opt.yolo_cbam_pretrained or opt.yolo_cbam_scratch):
+    if not (opt.all or opt.yolo_pretrained or opt.yolo_scratch or opt.yolo_cbam_scratch):
         opt.all = True
     
     main(opt) 
